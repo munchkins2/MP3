@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import pandas as pd
 import streamlit as st
 import joblib
@@ -9,7 +10,58 @@ BASE_DIR = Path(__file__).resolve().parent   # works wherever the app is launche
 MODEL_PATH = BASE_DIR / "student_rating_model.joblib"
 THRESHOLD = 0.5
 
-st.set_page_config(page_title="Student Success Predictor", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="Student Passing Calculator", layout="centered")
+
+# ------------------------------------------------------------------ styling
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #ffffff;
+        background-image:
+            linear-gradient(#e5e7eb 1px, transparent 1px),
+            linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+        background-size: 28px 28px;
+    }
+    [data-testid="stHeader"] { background: transparent; }
+    .block-container {
+        max-width: 720px;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 2rem 2rem 2.5rem 2rem;
+        margin-top: 2rem;
+    }
+    .stApp h1, .stApp h3, .stApp label, .stApp label p,
+    .stApp [data-testid="stCaptionContainer"] { color: #111827 !important; }
+    .stApp [data-testid="stCaptionContainer"] { color: #6b7280 !important; margin-top: -0.4rem; }
+    .stApp [data-baseweb="input"], .stApp [data-baseweb="input"] input,
+    .stApp [data-baseweb="base-input"] {
+        background-color: #ffffff !important; color: #111827 !important;
+    }
+    .result-box {
+        display: flex; align-items: center; gap: 1rem;
+        padding: 1rem 1.25rem; border-radius: 8px; margin-top: 1rem;
+    }
+    .result-box svg { flex: none; }
+    .result-title { font-size: 1.15rem; font-weight: 700; margin: 0; }
+    .result-sub { font-size: 0.95rem; margin: 0.15rem 0 0 0; }
+    .pass { background: #e6f4ea; border: 1px solid #34a853; color: #137333; }
+    .fail { background: #fce8e6; border: 1px solid #d93025; color: #a50e0e; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+THUMB_PATH = ("M1 21h4V9H1v12zm22-11c0-1.1-.9-2-2-2h-6.31l.95-4.57.03-.32c0-.41-.17-.79-.44-1.06"
+              "L14.17 1 7.59 7.59C7.22 7.95 7 8.45 7 9v10c0 1.1.9 2 2 2h9c.83 0 1.54-.5 1.84-1.22"
+              "l3.02-7.05c.09-.23.14-.47.14-.73v-2z")
+
+
+def thumb_icon(up: bool, color: str) -> str:
+    rotate = "" if up else ' transform="rotate(180 12 12)"'
+    return (f'<svg width="44" height="44" viewBox="0 0 24 24" fill="{color}">'
+            f'<path d="{THUMB_PATH}"{rotate}/></svg>')
 
 
 @st.cache_resource(show_spinner="Loading model...")
@@ -23,83 +75,47 @@ def load_bundle():
         return train()
 
 
-def predict(raw_df, bundle):
-    feats = add_features(raw_df[RAW_COLUMNS])[bundle["feature_columns"]]
-    p_high = bundle["model"].predict_proba(feats)[:, 1]
-    out = raw_df.copy()
-    out["Prob_Pass"] = p_high.round(3)
-    out["Prediction"] = ["Likely to pass (High)" if p >= THRESHOLD else "At risk (Low)" for p in p_high]
-    return out
+def prob_pass(values: dict, bundle) -> float:
+    row = pd.DataFrame([values])
+    feats = add_features(row[RAW_COLUMNS])[bundle["feature_columns"]]
+    return float(bundle["model"].predict_proba(feats)[0, 1])
 
 
 bundle = load_bundle()
 
-st.title("🎓 Student Success Predictor")
-st.caption("Predicts whether a student is likely to pass (High rating) or is at risk (Low rating) "
-           "from midterm LMS activity. It is an early-warning aid, not a final decision.")
+st.title("Student Passing Calculator")
 
-tab_single, tab_batch, tab_about = st.tabs(["Single student", "Whole class (CSV)", "About the model"])
+# ------------------------------------------------------------------ inputs
+FIELDS = [
+    ("Submission.Actions", "Submission", "Assignments or work handed in", 5, 1000),
+    ("Quiz.Actions", "Quiz", "Quiz attempts and answers submitted", 0, 5000),
+    ("Forum.Actions", "Forum", "Posts and replies in discussion forums", 0, 1000),
+    ("Create.Actions", "Create", "New content the student created", 5, 1000),
+    ("Read.Actions", "Read", "Course pages and materials viewed", 50, 5000),
+    ("Update.Actions", "Update", "Edits made to existing work", 2, 1000),
+    ("Delete.Actions", "Delete", "Content the student removed", 0, 100),
+    ("Days.Logged.In", "Days logged in", "Number of days the student logged into the LMS", 14, 200),
+]
 
-# ---------------------------------------------------------------- single student
-with tab_single:
-    st.subheader("Enter midterm LMS activity")
-    c1, c2 = st.columns(2)
-    vals = {}
-    with c1:
-        vals["Submission.Actions"] = st.number_input("Submission actions", 0, 1000, 5, help="Assignment submissions")
-        vals["Quiz.Actions"] = st.number_input("Quiz actions", 0, 5000, 0)
-        vals["Forum.Actions"] = st.number_input("Forum actions", 0, 1000, 0)
-        vals["Create.Actions"] = st.number_input("Create actions", 0, 1000, 5)
-    with c2:
-        vals["Read.Actions"] = st.number_input("Read actions", 0, 5000, 50)
-        vals["Update.Actions"] = st.number_input("Update actions", 0, 1000, 2)
-        vals["Delete.Actions"] = st.number_input("Delete actions", 0, 100, 0)
-        vals["Days.Logged.In"] = st.number_input("Days logged in", 0, 200, 14)
+vals = {}
+left, right = st.columns(2)
+for i, (key, label, desc, default, maxv) in enumerate(FIELDS):
+    with (left if i < 4 else right):
+        vals[key] = st.number_input(label, min_value=0, max_value=maxv, value=default, key=key)
+        st.caption(desc)
 
-    if st.button("Predict", type="primary", use_container_width=True):
-        res = predict(pd.DataFrame([vals]), bundle).iloc[0]
-        p = float(res["Prob_Pass"])
-        if p >= THRESHOLD:
-            st.success(f"**{res['Prediction']}**")
-        else:
-            st.error(f"**{res['Prediction']}** - consider early academic support")
-        st.metric("Probability of High rating (pass)", f"{p:.1%}")
-        st.progress(p)
-        st.caption("Confidence is highest near 0% or 100% and lowest near 50%.")
-
-# ---------------------------------------------------------------- batch
-with tab_batch:
-    st.subheader("Upload a CSV for a whole course")
-    st.write("Required columns: " + ", ".join(f"`{c}`" for c in RAW_COLUMNS) +
-             ". Any extra columns (e.g. a student ID) are kept.")
-    st.download_button("Download CSV template",
-                       pd.DataFrame(columns=["Student_ID"] + RAW_COLUMNS).to_csv(index=False),
-                       "template.csv", "text/csv")
-    up = st.file_uploader("CSV file", type="csv")
-    if up is not None:
-        data = pd.read_csv(up)
-        missing = [c for c in RAW_COLUMNS if c not in data.columns]
-        if missing:
-            st.error(f"Missing columns: {missing}")
-        elif data[RAW_COLUMNS].isna().any().any() or (data[RAW_COLUMNS] < 0).any().any():
-            st.error("Activity columns must be non-negative numbers with no blanks.")
-        else:
-            res = predict(data, bundle).sort_values("Prob_Pass")
-            n_low = int((res["Prob_Pass"] < THRESHOLD).sum())
-            a, b = st.columns(2)
-            a.metric("Students", len(res))
-            b.metric("Flagged at risk", f"{n_low} ({n_low / len(res):.0%})")
-            st.dataframe(res, use_container_width=True)
-            st.download_button("Download results", res.to_csv(index=False),
-                               "predictions.csv", "text/csv")
-
-# ---------------------------------------------------------------- about
-with tab_about:
-    st.subheader("About")
-    st.markdown(f"""
-- **Model:** Extra Trees classifier (300 trees), chosen over Random Forest and Histogram Gradient Boosting by 5-fold cross-validation (88.1% CV accuracy).
-- **Test accuracy:** **{bundle['test_accuracy']:.2%}** on a held-out 20% test set (stratified split, seed {bundle['random_seed']}).
-- **Inputs:** 8 midterm LMS activity counts, plus 4 derived features (total actions, read share, reads per login day, quiz actions per login day).
-- **Meaning of the output:** *High* = activity resembles students who finished with a high rating (likely pass); *Low* = resembles low-rated students (at risk).
-- **Limits:** the model finds an association between activity and rating, not a cause. Training data is augmented and balanced, so real-world accuracy may differ. Use predictions to start a conversation with the student, not to make final decisions.
-""")
+# ------------------------------------------------------------------ result
+if st.button("Predict", type="primary", use_container_width=True):
+    p = prob_pass(vals, bundle)
+    if p >= THRESHOLD:
+        st.markdown(
+            f"""<div class="result-box pass">{thumb_icon(True, "#137333")}
+            <div><p class="result-title">Likely to pass (High)</p>
+            <p class="result-sub">Probability of passing: {p:.1%}</p></div></div>""",
+            unsafe_allow_html=True)
+    else:
+        st.markdown(
+            f"""<div class="result-box fail">{thumb_icon(False, "#a50e0e")}
+            <div><p class="result-title">At risk (Low)</p>
+            <p class="result-sub">Probability of passing: {p:.1%}. Consider early academic support.</p></div></div>""",
+            unsafe_allow_html=True)

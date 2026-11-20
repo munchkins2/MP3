@@ -17,16 +17,16 @@ st.markdown(
     """
     <style>
     .stApp {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
         background-image:
             linear-gradient(#e5e7eb 1px, transparent 1px),
-            linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
-        background-size: 28px 28px;
+            linear-gradient(90deg, #e5e7eb 1px, transparent 1px) !important;
+        background-size: 28px 28px !important;
     }
     [data-testid="stHeader"] { background: transparent; }
     .block-container {
         max-width: 720px;
-        background: #ffffff;
+        background: #ffffff !important;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
         padding: 2rem 2rem 2.5rem 2rem;
@@ -34,10 +34,36 @@ st.markdown(
     }
     .stApp h1, .stApp h3, .stApp label, .stApp label p,
     .stApp [data-testid="stCaptionContainer"] { color: #111827 !important; }
-    .stApp [data-testid="stCaptionContainer"] { color: #6b7280 !important; margin-top: -0.4rem; }
-    .stApp [data-baseweb="input"], .stApp [data-baseweb="input"] input,
-    .stApp [data-baseweb="base-input"] {
-        background-color: #ffffff !important; color: #111827 !important;
+    .stApp [data-testid="stCaptionContainer"],
+    .stApp [data-testid="stCaptionContainer"] p {
+        color: #000000 !important; opacity: 1 !important;
+    }
+    .stApp [data-testid="stCaptionContainer"] { margin-top: -0.4rem; }
+
+    /* number boxes: soft teal tint */
+    .stApp [data-testid="stNumberInput"] [data-baseweb="input"],
+    .stApp [data-testid="stNumberInput"] [data-baseweb="base-input"],
+    .stApp [data-testid="stNumberInput"] input {
+        background-color: #e3f1ef !important; color: #0b3b36 !important;
+    }
+    .stApp [data-testid="stNumberInput"] [data-baseweb="input"] {
+        border: 1px solid #8fc3bc !important; border-radius: 6px;
+    }
+    .stApp [data-testid="stNumberInputStepUp"],
+    .stApp [data-testid="stNumberInputStepDown"] {
+        background-color: #cfe7e3 !important; color: #0b3b36 !important;
+    }
+
+    /* predict button: deep teal */
+    .stApp button[kind="primary"], .stApp [data-testid="stBaseButton-primary"] {
+        background-color: #0f766e !important; border: 1px solid #0f766e !important;
+        color: #ffffff !important;
+    }
+    .stApp button[kind="primary"]:hover, .stApp [data-testid="stBaseButton-primary"]:hover {
+        background-color: #115e59 !important; border-color: #115e59 !important;
+    }
+    .stApp button[kind="primary"] p, .stApp [data-testid="stBaseButton-primary"] p {
+        color: #ffffff !important;
     }
     .result-box {
         display: flex; align-items: center; gap: 1rem;

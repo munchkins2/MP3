@@ -1,11 +1,12 @@
-import os
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 import joblib
 
 from features import RAW_COLUMNS, add_features
 
-MODEL_PATH = "student_rating_model.joblib"
+BASE_DIR = Path(__file__).resolve().parent   # works wherever the app is launched from
+MODEL_PATH = BASE_DIR / "student_rating_model.joblib"
 THRESHOLD = 0.5
 
 st.set_page_config(page_title="Student Success Predictor", page_icon="🎓", layout="centered")

@@ -2,6 +2,7 @@
 Run:  python train_model.py
 Same pipeline as the notebook: stratified 80/20 split, seed 42, Extra Trees
 (the model selected by 5-fold CV). Test set is used once, for the final score."""
+from pathlib import Path
 import joblib, pandas as pd, sklearn
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.metrics import accuracy_score
@@ -9,7 +10,8 @@ from sklearn.model_selection import train_test_split
 from features import RAW_COLUMNS, add_features
 
 SEED = 42
-CSV, OUT = "augmented_balanced_dataset_m.csv", "student_rating_model.joblib"
+BASE = Path(__file__).resolve().parent
+CSV, OUT = BASE / "augmented_balanced_dataset_m.csv", BASE / "student_rating_model.joblib"
 
 
 def train():
